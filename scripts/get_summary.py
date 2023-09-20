@@ -19,13 +19,13 @@ def get_results(folders, number_of_days=None):
     from_date = (
         (datetime.utcnow() - timedelta(days=number_of_days)) if number_of_days else None
     )
-
+    print("from_date:" + str(from_date))
     for folder in folders:
         date = folder.split("/")[-1].split("T")[0]
-        if from_date and datetime.strptime(date, "%Y-%m-%d") < from_date:
+        if from_date and datetime.strptime(date, "%d-%m-%y-%H-%M") < from_date:
             continue
         yield Result(date, BenchmarkStats([folder]))
-      
+
 def parse_environment_variables():
 
     days = os.getenv("NUMBER_OF_DAYS")
@@ -48,8 +48,7 @@ if __name__ == "__main__":
     sorted_folders = sorted(glob(f"{parsed_variables['output_dir']}/*"), reverse=True)
     with open("results.txt", 'w') as file:
         file.write("Results: \n")
-        results = get_results(sorted_folders)
-
+        results = get_results(sorted_folders, parsed_variables.get("number_of_days"))
         for result in results:
             if date_to_output:
                 if result.date == date_to_output:

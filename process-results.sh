@@ -15,6 +15,7 @@ OUTPUT_DIR="outputs/" \
 # OUTPUT_DATE="$RUNTIME_DATE_STRING" \
 pipenv run python -m scripts.get_summary
 
-cat results.txt
+cat summary.txt
 
-# pipenv run python -m scripts.store_benchmark_outputs
+GCS_BENCHMARK_RESULTS_BUCKET="$GCS_BENCHMARK_RESULTS_BUCKET" \
+pipenv run python -m scripts.store_benchmark_outputs

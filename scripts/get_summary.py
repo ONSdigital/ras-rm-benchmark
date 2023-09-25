@@ -46,7 +46,7 @@ if __name__ == "__main__":
     parsed_variables = parse_environment_variables()
     date_to_output = parsed_variables["output_date"]
     sorted_folders = sorted(glob(f"{parsed_variables['output_dir']}/*"), reverse=True)
-    with open("results.txt", 'w') as file:
+    with open("summary.txt", 'w') as file:
         file.write("Results: \n")
         results = get_results(sorted_folders, parsed_variables.get("number_of_days"))
         for result in results:

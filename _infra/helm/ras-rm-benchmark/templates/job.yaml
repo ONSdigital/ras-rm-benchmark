@@ -22,5 +22,7 @@ spec:
               value: "ras-rm-performance-tests"
             - name: GCS_OUTPUT_BUCKET
               value: "{{ .Values.output.bucket }}"
-            - name: OUTPUT_DIRECTORY
-              value: "results"
+            - name: BENCHMARK_OUTPUT_DIRECTORY
+              value: "{{ .Values.benchmark.directory }}"
+            - name: GCS_BENCHMARK_RESULTS_BUCKET
+              value: "{{ .Values.benchmark.bucket }}"

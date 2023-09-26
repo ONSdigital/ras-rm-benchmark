@@ -19,7 +19,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: GOOGLE_CLOUD_PROJECT
-              value: "ras-rm-performance-tests"
+              value: "ras-rm-performance-20220908"
             - name: GCS_OUTPUT_BUCKET
               value: "{{ .Values.output.bucket }}"
             - name: BENCHMARK_OUTPUT_DIRECTORY

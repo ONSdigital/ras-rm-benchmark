@@ -101,7 +101,6 @@ jobs:
         id: vars
         run: |
           git fetch --tags
-          echo ::set-output name=tag::$(git describe --tags --abbrev=0)
           TAG=$(git describe --tags --abbrev=0)
           echo "TAG=${TAG}" >> $GITHUB_ENV
           
@@ -149,7 +148,6 @@ jobs:
         id: release
         shell: bash
         run: |
-          echo ::set-output name=version::$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
           VERSION=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 

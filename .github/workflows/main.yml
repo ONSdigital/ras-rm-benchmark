@@ -71,7 +71,7 @@ jobs:
         run: |
           PR=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
           echo ::set-output name=pr_number::pr-"$PR"
-          echo "pr_number=pr-${PR}" >> $GITHUB_ENV
+          echo "PR_NUMBER=pr-${PR}" >> $GITHUB_ENV
         # Build the Docker image
       - name: Build Docker Image
         if: github.ref != 'refs/heads/main'
@@ -105,7 +105,7 @@ jobs:
           git fetch --tags
           echo ::set-output name=tag::$(git describe --tags --abbrev=0)
           TAG=$(git describe --tags --abbrev=0)
-          echo "tag=${TAG}" >> $GITHUB_ENV
+          echo "TAG=${TAG}" >> $GITHUB_ENV
           
 
       - name: update version
@@ -152,6 +152,8 @@ jobs:
         shell: bash
         run: |
           echo ::set-output name=version::$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
+          VERSION=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Build Release Image
         if: github.ref == 'refs/heads/main'

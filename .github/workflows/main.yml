@@ -72,10 +72,12 @@ jobs:
           PR=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
           echo "$PR"
           echo ::set-output name=pr_number::pr-"$PR"
+          echo "pr_number=${PR}" >> $GITHUB_ENV
         # Build the Docker image
       - name: Build Docker Image
         if: github.ref != 'refs/heads/main'
         run: |
+          printf '%s\n' "$pr_number" # This will output the pr_number <<<<<<<< !!!!!!!
           docker build -t "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":${{ steps.tag.outputs.pr_number }} -f _infra/docker/Dockerfile .
       - name: Push dev image
         if: github.ref != 'refs/heads/main'

@@ -71,7 +71,7 @@ jobs:
         run: |
           PR=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
           echo "PR_NUMBER=pr-${PR}" >> $GITHUB_ENV
-          echo "PR Docker tag is $PR_NUMBER"
+          echo "PR Docker tag is ${PR_NUMBER}"
         # Build the Docker image
       - name: Build Docker Image
         if: github.ref != 'refs/heads/main'

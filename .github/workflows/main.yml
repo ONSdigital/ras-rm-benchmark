@@ -89,13 +89,14 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           echo "Preparing PR Helm chart"
+          ls -ltra $CHART_DIRECTORY
           sed -i '' -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
 
       - name: Template Helm chart
         run: |
           helm template $CHART_DIRECTORY
 
-      - name: Package Helm
+      - name: Create Helm package
         run: |
           HELM_CHART_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
           echo "HELM_CHART_VERSION=${HELM_CHART_VERSION=}" >> $GITHUB_ENV
@@ -103,7 +104,7 @@ jobs:
           helm dep up $CHART_DIRECTORY
           helm package $CHART_DIRECTORY
 
-      - name: Publish dev Chart
+      - name: Publish PR Helm chart
         if: github.ref != 'refs/heads/main'
         run: |
           mv $IMAGE-${{ env.HELM_CHART_VERSION }}.tgz $IMAGE-latest.tgz

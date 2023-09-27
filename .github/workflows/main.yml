@@ -90,6 +90,8 @@ jobs:
         run: |
           echo "Preparing PR Helm chart"
           ls -ltra
+          cd _infra/helm/ras-rm-benchmark
+          ls -ltra
           sed -i '' -e "s/tag: latest/tag: ${PR_NUMBER}/g" _infra/helm/ras-rm-benchmark/values.yaml
 
       - name: Template Helm chart

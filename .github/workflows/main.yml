@@ -106,7 +106,7 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           
 
-      - name: update version
+      - name: Update appVersion in Helm Chart.yaml
         if: github.ref != 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -124,7 +124,7 @@ jobs:
             NEW_SEMVER_PATCH_VERSION=$(($OLD_SEMVER_PATCH_VERSION + 1))
             echo "New semver patch version: $NEW_SEMVER_PATCH_VERSION"
             NEW_SEMVER_VERSION="appVersion: $(echo $TAG | sed -e "s/[0-9]\{1,3\}/$NEW_SEMVER_PATCH_VERSION/3")"
-            echo "new version: $NEW_SEMVER_VERSION"
+            echo "Updating Chart.yaml appVersion from $APP_VERSION to $NEW_SEMVER_VERSION"
             sed -i -e "s/appVersion: .*/$NEW_SEMVER_VERSION/g" $CHART_DIRECTORY/Chart.yaml
 
             git config user.name "ras-rm-pr-bot"

@@ -88,13 +88,12 @@ jobs:
       - name: Prepare PR Helm chart
         if: github.ref != 'refs/heads/main'
         run: |
-          echo "Preparing local PR Helm chart"  
+          echo "Preparing PR Helm chart"
+          sed -i '' -e "s/tag: latest/tag: ${PR_NUMBER}/g" _infra/helm/ras-rm-benchmark/values.yaml
 
       - name: Template Helm chart
         run: |
           helm template $CHART_DIRECTORY
-          ls -ltra
-          
 
       - name: Package Helm
         run: |
@@ -156,6 +155,10 @@ jobs:
             echo "Github tag and current Helm chart appVersion do not match, assuming the appVersion semver patch version bump has happened"
             echo "Using current Helm Chart.yaml appVersion: $APP_VERSION"
           fi
+
+      #######
+      # The following steps are only carried out following a merge to the main branch
+      #######
 
       - name: Retrieving appVersion from Helm Chart.yaml
         if: github.ref == 'refs/heads/main'

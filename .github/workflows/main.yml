@@ -81,20 +81,22 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER"
-      - name: template helm
+      - name: Template helm
         run: |
           helm template $CHART_DIRECTORY
 
-      - name: package helm
+      - name: Package helm
         run: |
-          echo HELM_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g') >> $GITHUB_ENV
+          echo HELM_CHART_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
+          echo "HELM_CHART_VERSION=${HELM_CHART_VERSION=}" >> $GITHUB_ENV
+          echo "Helm Chart.yaml version is $HELM_CHART_VERSION"
           helm dep up $CHART_DIRECTORY
           helm package $CHART_DIRECTORY
 
       - name: Publish dev Chart
         if: github.ref != 'refs/heads/main'
         run: |
-          mv $IMAGE-${{ env.HELM_VERSION }}.tgz $IMAGE-latest.tgz
+          mv $IMAGE-${{ env.HELM_CHART_VERSION }}.tgz $IMAGE-latest.tgz
           gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/
 
       - name: Set current tag
@@ -118,7 +120,7 @@ jobs:
           export APP_VERSION=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
           echo "Helm Chart.yaml appVersion: $APP_VERSION"
           if [ $TAG = $APP_VERSION ]; then
-            echo "Github tag and Helm chart appVersion match, incrementing semver patch version"
+            echo "Github tag and current Helm chart appVersion match, bumping appVersion semver patch version"
             OLD_SEMVER_PATCH_VERSION=$(echo $TAG | cut -d '.' -f3)
             echo "OLD semver patch version: $OLD_SEMVER_PATCH_VERSION"
             NEW_SEMVER_PATCH_VERSION=$(($OLD_SEMVER_PATCH_VERSION + 1))
@@ -140,7 +142,7 @@ jobs:
 
             git push 
           else
-            echo "git version and appVersion do not not match"
+            echo "Github tag and current Helm chart appVersion do not match, assuming the appVersion semver patch version bump has happened"
             echo "Using current Helm Chart.yaml appVersion: $APP_VERSION"
           fi
 
@@ -180,9 +182,9 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: CD hook
+      - name: Trigger Spinnaker PUBSUB deployment
         if: github.ref == 'refs/heads/main'
         run: |
           gcloud pubsub topics publish $SPINNAKER_TOPIC --project $HOST \
-          --message "{ \"kind\": \"storage#object\", \"name\": \"$IMAGE/$IMAGE-${{ env.HELM_VERSION }}.tgz\", \"bucket\": \"$ARTIFACT_BUCKET\" }" \
+          --message "{ \"kind\": \"storage#object\", \"name\": \"$IMAGE/$IMAGE-${{ env.HELM_CHART_VERSION }}.tgz\", \"bucket\": \"$ARTIFACT_BUCKET\" }" \
           --attribute cd="actions"

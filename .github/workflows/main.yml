@@ -89,7 +89,6 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           echo "Preparing PR Helm chart"
-          ls -ltra $CHART_DIRECTORY
           sed -i -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
 
       - name: Template Helm chart
@@ -107,8 +106,8 @@ jobs:
       - name: Publish PR Helm chart
         if: github.ref != 'refs/heads/main'
         run: |
-          mv $IMAGE-${{ env.HELM_CHART_VERSION }}.tgz $IMAGE-latest.tgz
-          gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/
+          echo "The Helm chart tgz will be renamed as this is not a release candidate"
+          gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-$PR_NUMBER.tgz
 
       - name: Retrieving most recent Github release tag
         if: github.ref != 'refs/heads/main'
@@ -119,6 +118,7 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "The Most recent Github release tag is $TAG"
 
+      # This should only happen once when the PR is initially opened
       - name: Update appVersion in Helm Chart.yaml
         if: github.ref != 'refs/heads/main'
         env:
@@ -180,7 +180,7 @@ jobs:
         run: |
           docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":"$APP_VERSION"
 
-      - name: Publish Charts
+      - name: Publish release candidate Helm chart
         if: github.ref == 'refs/heads/main'
         run: |
           gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/

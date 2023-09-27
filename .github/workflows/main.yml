@@ -106,7 +106,7 @@ jobs:
       - name: Publish PR Helm chart
         if: github.ref != 'refs/heads/main'
         run: |
-          echo "The Helm chart tgz will be renamed as this is not a release candidate"
+          echo "The Helm chart file will be renamed from $IMAGE-$HELM_CHART_VERSION.tgz to $IMAGE-$PR_NUMBER.tgz as this is not a release candidate"
           gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-$PR_NUMBER.tgz
 
       - name: Retrieving most recent Github release tag
@@ -153,7 +153,7 @@ jobs:
 
             git push 
           else
-            echo "Github tag and current Helm chart appVersion do not match, assuming the appVersion semver patch version bump has happened"
+            echo "Github tag and current Helm chart appVersion do not match, assuming the appVersion patch bump has happened"
             echo "Using current Helm Chart.yaml appVersion: $APP_VERSION"
           fi
 

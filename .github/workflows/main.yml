@@ -86,12 +86,15 @@ jobs:
           docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER"
 
       - name: Prepare PR Helm chart
+        if: github.ref != 'refs/heads/main'
         run: |
           echo "Preparing local PR Helm chart"  
 
       - name: Template Helm chart
         run: |
           helm template $CHART_DIRECTORY
+          ls -ltra
+          
 
       - name: Package Helm
         run: |

@@ -87,7 +87,7 @@ jobs:
 
       - name: Template Helm chart
         run: |
-          helm template $CHART_DIRECTORY
+          helm template --set-string "image.tag=${PR_NUMBER}" $CHART_DIRECTORY
 
       - name: Package Helm
         run: |

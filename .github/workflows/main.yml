@@ -89,7 +89,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           echo "Preparing PR Helm chart"
-          sed -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
+          sed -i -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
 
       - name: Template Helm chart
         run: |

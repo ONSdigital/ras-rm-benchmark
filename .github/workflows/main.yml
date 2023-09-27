@@ -85,9 +85,13 @@ jobs:
         run: |
           docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER"
 
+      - name: Prepare PR Helm chart
+        run: |
+          echo "Preparing local PR Helm chart"  
+
       - name: Template Helm chart
         run: |
-          helm template --set-string "image.tag=${PR_NUMBER}" $CHART_DIRECTORY
+          helm template $CHART_DIRECTORY
 
       - name: Package Helm
         run: |

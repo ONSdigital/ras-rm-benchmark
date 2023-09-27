@@ -53,7 +53,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.9'
-      - name: Build
+      - name: Build application
         run: |
           python -m pip install --upgrade pip
           pip install pipenv
@@ -73,17 +73,17 @@ jobs:
           echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
           echo "The PR tag is $PR_NUMBER"
         # Build the Docker image
-      - name: Build Docker Image
+      - name: Build PR tagged Docker image
         if: github.ref != 'refs/heads/main'
         run: |
           docker build -t "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER" -f _infra/docker/Dockerfile .
-      - name: Push dev image
+      - name: Push PR tagged Docker image to GAR
         if: github.ref != 'refs/heads/main'
         run: |
           docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER"
-      - name: Template helm
+      - name: Template Helm chart
         run: |
-          helm template $CHART_DIRECTORY
+          helm template --app-version string$CHART_DIRECTORY
 
       - name: Package Helm
         run: |
@@ -156,7 +156,7 @@ jobs:
           echo "Using Helm Chart.yaml appVersion: $APP_VERSION"
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
 
-      - name: Build Release Image
+      - name: Build Release tagged Docker image
         if: github.ref == 'refs/heads/main'
         run: |
           docker build -f _infra/docker/Dockerfile -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":"$APP_VERSION" .

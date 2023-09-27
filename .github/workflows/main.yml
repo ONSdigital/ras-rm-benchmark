@@ -90,7 +90,7 @@ jobs:
         run: |
           echo "Preparing PR Helm chart"
           ls -ltra $CHART_DIRECTORY
-          sed -i '' -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
+          sed -i -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
 
       - name: Template Helm chart
         run: |

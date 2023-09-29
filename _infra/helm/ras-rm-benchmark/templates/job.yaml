@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: {{ .Chart.Name}}
 spec:
-  ttlSecondsAfterFinished: 0
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       name: "{{ .Chart.Name }}"

@@ -109,8 +109,6 @@ jobs:
         run: |
           echo "The Helm chart file will be copied from $IMAGE-$HELM_CHART_VERSION.tgz to $IMAGE-$PR_NUMBER.tgz as this is not a release candidate"
           gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-$PR_NUMBER.tgz
-          echo "The Helm chart file will be copied from $IMAGE-$HELM_CHART_VERSION.tgz to $IMAGE-latest.tgz - this branch only !!!!"
-          gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-latest.tgz
 
       - name: Retrieving most recent Github release tag
         if: github.ref != 'refs/heads/main'

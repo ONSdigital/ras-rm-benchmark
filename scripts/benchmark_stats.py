@@ -104,9 +104,10 @@ class BenchmarkStats:
 
     @property
     def average_post(self) -> int:
-        return int(
-            sum(self._requests["POST"]["response_times"])
-            / self._get_weighted_request_count(self._requests["POST"]["total"])
+        return int(0
+            # No POST requests for the time being !!
+            # sum(self._requests["POST"]["response_times"])
+            # / self._get_weighted_request_count(self._requests["POST"]["total"])
         )
 
     @property

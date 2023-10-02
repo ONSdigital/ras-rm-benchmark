@@ -5,5 +5,9 @@ image:
   pullPolicy: Always
 
 output:
-  bucket: "ras-rm-performance-results"
+  bucket: "ras-rm-performance-20220908-locust"
   directory: "."
+
+benchmark:
+  bucket: "ras-rm-performance-20220908-benchmark"
+  directory: "results"

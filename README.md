@@ -11,7 +11,7 @@ Useful commands to run or test locally. Ensure you have authenticated your gclou
 cd <YOUR_PARTH>/ras-rm-benchmark
 
 export NUMBER_OF_DAYS=10
-export RUNTIME_DATE_STRING="$(date +'%d-%m-%y-%H-%M')"
+export RUNTIME_DATE_STRING="$(date +'%y-%m-%d-%H-%M')"
 export GCS_OUTPUT_BUCKET=ras-rm-performance-20220908-locust
 export GCS_BENCHMARK_RESULTS_BUCKET=ras-rm-performance-20220908-benchmark
 export BENCHMARK_OUTPUT_DIRECTORY=$RUNTIME_DATE_STRING

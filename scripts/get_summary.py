@@ -22,7 +22,7 @@ def get_results(folders, number_of_days=None):
     print("from_date:" + str(from_date))
     for folder in folders:
         date = folder.split("/")[-1].split("T")[0]
-        if from_date and datetime.strptime(date, "%d-%m-%y-%H-%M") < from_date:
+        if from_date and datetime.strptime(date, "%y-%m-%d-%H-%M") < from_date:
             continue
         yield Result(date, BenchmarkStats([folder]))
 

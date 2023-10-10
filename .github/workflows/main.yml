@@ -197,7 +197,7 @@ jobs:
           release_name: $APP_VERSION
           body: |
             Automated release
-            $APP_VERSION
+            echo "$APP_VERSION"
           draft: false
           prerelease: false
 

@@ -87,7 +87,6 @@ jobs:
           echo '#!/bin/bash' >> /tmp/gpg.sh
           echo 'gpg --batch --pinentry-mode=loopback --passphrase $BOT_GPG_KEY_PASSPHRASE $@' >> /tmp/gpg.sh
           chmod +x /tmp/gpg.sh
-          ls -ltra /tmp
 
       - name: Setup git
         run: |
@@ -96,12 +95,6 @@ jobs:
           git config gpg.program /tmp/gpg.sh
           git config user.name "${{ secrets.BOT_USERNAME }}"
           git config user.email "${{ secrets.BOT_EMAIL }}"
-
-      - name: Prepare gpg CLI signing step
-        run: |
-          rm -rf /tmp/gpg.sh
-          echo '#!/bin/bash' >> /tmp/gpg.sh
-          echo 'gpg --batch --pinentry-mode=loopback --passphrase $BOT_GPG_KEY_PASSPHRASE $@' >> /tmp/gpg.sh
 
       - name: update version
         if: github.ref != 'refs/heads/main'

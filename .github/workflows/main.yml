@@ -6,21 +6,16 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - _infra/spinnaker/**
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - _infra/spinnaker/**
-      - _infra/helm/ras-rm-benchmark/Chart.yaml
 
 env:
   IMAGE: ras-rm-benchmark
   REGISTRY_HOSTNAME: eu.gcr.io
   HOST: ${{ secrets.GOOGLE_PROJECT_ID }}
   RELEASE_HOST: ${{ secrets.RELEASE_PROJECT_ID }}
-  CHART_DIRECTORY: _infra/helm/ras-rm-benchmark
+  CHART_DIRECTORY: _infra/helm/frontstage
   SPINNAKER_TOPIC: ${{ secrets.SPINNAKER_TOPIC }}
   ARTIFACT_BUCKET: ${{ secrets.ARTIFACT_BUCKET }}
 
@@ -30,99 +25,58 @@ jobs:
   build:
     name: Build & Package
     runs-on: ubuntu-latest
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps port 6379 on service container to the host
-          - 6379:6379
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: '0'
           token: ${{ secrets.BOT_TOKEN }}
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-
-      - name: Build application
+          python-version: '3.11'
+      - name: Build
         run: |
           python -m pip install --upgrade pip
           pip install pipenv
           pipenv install --dev
-
-      - uses: google-github-actions/setup-gcloud@v0
+      - name: Authenticate with Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-          service_account_key: ${{ secrets.GCR_KEY }}
+          credentials_json: ${{ secrets.GCR_KEY }}
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
       - run: |
           gcloud auth configure-docker
 
-      - name: Retrieving PR tag
+      - name: pr docker tag
         if: github.ref != 'refs/heads/main'
         id: tag
         run: |
-          PR_NUMBER=pr-$(echo "$GITHUB_REF" | awk -F / '{print $3}')
-          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
-          echo "The PR tag is $PR_NUMBER"
-
-      - name: Build PR tagged Docker image
+          PR=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
+          echo "$PR"
+          echo "pr_number=pr-$PR" >> $GITHUB_ENV
+        # Build the Docker image
+      - name: Build Docker Image
         if: github.ref != 'refs/heads/main'
         run: |
-          docker build -t "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER" -f _infra/docker/Dockerfile .
-
-      - name: Push PR tagged Docker image to GAR
+          docker build -t "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":${{ env.pr_number }} -f _infra/docker/Dockerfile .
+      - name: Push dev image
         if: github.ref != 'refs/heads/main'
         run: |
-          docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":"$PR_NUMBER"
-
-      - name: Prepare PR Helm chart
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "Preparing PR Helm chart"
-          echo "Updating values.yaml from image.tag: latest to image.tag: $PR_NUMBER"
-          sed -i -e "s/tag: latest/tag: ${PR_NUMBER}/g" $CHART_DIRECTORY/values.yaml
-
-      - name: Template Helm chart
+          docker push "$REGISTRY_HOSTNAME"/"$HOST"/"$IMAGE":${{ env.pr_number }}
+      - name: template helm
         run: |
           helm template $CHART_DIRECTORY
 
-      - name: Create Helm package
-        run: |
-          HELM_CHART_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
-          echo "HELM_CHART_VERSION=${HELM_CHART_VERSION=}" >> $GITHUB_ENV
-          echo "Helm Chart.yaml version is $HELM_CHART_VERSION"
-          helm dep up $CHART_DIRECTORY
-          helm package $CHART_DIRECTORY
-
-      - name: Publish PR Helm chart
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "The Helm chart file will be copied from $IMAGE-$HELM_CHART_VERSION.tgz to $IMAGE-$PR_NUMBER.tgz as this is not a release candidate"
-          gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-$PR_NUMBER.tgz
-          echo "The Helm chart file will be copied from $IMAGE-$HELM_CHART_VERSION.tgz to $IMAGE-latest.tgz - this branch only !!!!"
-          gsutil cp $IMAGE-$HELM_CHART_VERSION.tgz gs://$ARTIFACT_BUCKET/$IMAGE/$IMAGE-latest.tgz
-
-      - name: Retrieving most recent Github release tag
+      - name: Set current tag
         if: github.ref != 'refs/heads/main'
         id: vars
         run: |
           git fetch --tags
-          TAG=$(git describe --tags --abbrev=0)
-          echo "TAG=${TAG}" >> $GITHUB_ENV
-          echo "The Most recent Github release tag is $TAG"
+          echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
 
-      # This should only happen once when the PR is initially opened
-      - name: Update appVersion in Helm Chart.yaml
+      - name: update version
         if: github.ref != 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -130,80 +84,95 @@ jobs:
             auto patch increment
         shell: bash
         run: |
-          echo "Current git release tag: $TAG"
+          echo "Current git version: ${{ env.tag }}"
           export APP_VERSION=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
-          echo "Helm Chart.yaml appVersion: $APP_VERSION"
-          if [ $TAG = $APP_VERSION ]; then
-            echo "Github tag and current Helm chart appVersion match, bumping appVersion semver patch version"
-            OLD_SEMVER_PATCH_VERSION=$(echo $TAG | cut -d '.' -f3)
-            echo "OLD semver patch version: $OLD_SEMVER_PATCH_VERSION"
-            NEW_SEMVER_PATCH_VERSION=$(($OLD_SEMVER_PATCH_VERSION + 1))
-            echo "New semver patch version: $NEW_SEMVER_PATCH_VERSION"
-            NEW_SEMVER_VERSION="appVersion: $(echo $TAG | sed -e "s/[0-9]\{1,3\}/$NEW_SEMVER_PATCH_VERSION/3")"
-            echo "Updating Chart.yaml appVersion from $APP_VERSION to $NEW_SEMVER_VERSION"
-            sed -i -e "s/appVersion: .*/$NEW_SEMVER_VERSION/g" $CHART_DIRECTORY/Chart.yaml
-
+          export CHART_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
+          echo "appVersion: $APP_VERSION"
+          echo "chartVersion: $CHART_VERSION"
+          if [ ${{ env.tag }} = $APP_VERSION ]; then
+            echo "versions match, incrementing patch"
+            OLD_PATCH=$(echo ${{ env.tag }} | cut -d '.' -f3)
+            echo "OLD patch: $OLD_PATCH"
+            NEW_PATCH=$(($OLD_PATCH + 1))
+            echo "New patch version: $NEW_PATCH"
+            NEW_APP_VERSION="appVersion: $(echo ${{ env.tag }} | sed -e "s/[0-9]\{1,3\}/$NEW_PATCH/3")"
+            NEW_CHART_VERSION="version: $(echo ${{ env.tag }} | sed -e "s/[0-9]\{1,3\}/$NEW_PATCH/3")"
+            sed -i -e "s/appVersion: .*/$NEW_APP_VERSION/g" $CHART_DIRECTORY/Chart.yaml
+            sed -i -e "s/version: .*/$NEW_CHART_VERSION/g" $CHART_DIRECTORY/Chart.yaml
             git config user.name "ras-rm-pr-bot"
             git config user.email "${{ secrets.BOT_EMAIL }}"
-
             git remote set-url origin https://ras-rm-pr-bot:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-
             git remote update
             git fetch
             git checkout ${{ github.head_ref }}
             git add $CHART_DIRECTORY/Chart.yaml
             git commit -m "$COMMIT_MSG"
-
-            git push 
+            git push
           else
-            echo "Github tag and current Helm chart appVersion do not match, assuming the appVersion patch bump has happened"
-            echo "Using current Helm Chart.yaml appVersion: $APP_VERSION"
+            if [ $APP_VERSION != $CHART_VERSION ]; then
+              echo "app version manually updated without updating chart version"
+              NEW_CHART_VERSION="version: $APP_VERSION"
+              echo "replacing version with $NEW_CHART_VERSION"
+              sed -i -e "s/version: .*/$NEW_CHART_VERSION/g" $CHART_DIRECTORY/Chart.yaml
+              git config user.name "ras-rm-pr-bot"
+              git config user.email "${{ secrets.BOT_EMAIL }}"
+              git remote set-url origin https://ras-rm-pr-bot:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+              git remote update
+              git fetch
+              git checkout ${{ github.head_ref }}
+              git add $CHART_DIRECTORY/Chart.yaml
+              git commit -m "$COMMIT_MSG"
+              git push
+            else
+              echo "git version different to chart/app versions and chart/app versions match"
+              echo "Using current version: $APP_VERSION"
+            fi
           fi
 
-      #######
-      # The following steps are only carried out following a merge to the main branch
-      #######
-
-      - name: Retrieving appVersion from Helm Chart.yaml
+      - name: output new version
         if: github.ref == 'refs/heads/main'
         id: release
         shell: bash
         run: |
-          APP_VERSION=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')
-          echo "Using Helm Chart.yaml appVersion: $APP_VERSION"
-          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
+          echo "version=$(grep -E "appVersion:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g')" >> $GITHUB_ENV
 
-      - name: Build Release tagged Docker image
+      - name: package helm
+        run: |
+          echo HELM_VERSION=$(grep -E "version:\s+" $CHART_DIRECTORY/Chart.yaml | cut -d" " -f2 | sed -r 's/"//g') >> $GITHUB_ENV
+          helm dep up $CHART_DIRECTORY
+          helm package $CHART_DIRECTORY
+
+      - name: Publish dev Chart
+        if: github.ref != 'refs/heads/main'
+        run: |
+          mv $IMAGE-${{ env.HELM_VERSION }}.tgz $IMAGE-${{ env.pr_number }}.tgz
+          gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/
+
+      - name: Build Release Image
         if: github.ref == 'refs/heads/main'
         run: |
-          docker build -f _infra/docker/Dockerfile -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":"$APP_VERSION" .
-
+          docker build -f _infra/docker/Dockerfile -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":latest -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":${{ env.version }} .
       - name: Push Release image
         if: github.ref == 'refs/heads/main'
         run: |
-          docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":"$APP_VERSION"
+          docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":${{ env.version }}
+          docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":latest
 
-      - name: Publish release candidate Helm chart
+      - name: Publish Charts
         if: github.ref == 'refs/heads/main'
         run: |
+          cp $IMAGE-${{ env.HELM_VERSION }}.tgz $IMAGE-latest.tgz
           gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/
 
-      - uses: actions/create-release@v1
+      - name: Create Release
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: $APP_VERSION
-          release_name: $APP_VERSION
-          body: |
-            Automated release
-            $APP_VERSION
-          draft: false
-          prerelease: false
+        run: gh release create ${{ env.version }} --title ${{ env.version }} --notes ${{ env.version }}
 
-      - name: Trigger Spinnaker PUBSUB deployment
+      - name: CD hook
         if: github.ref == 'refs/heads/main'
         run: |
           gcloud pubsub topics publish $SPINNAKER_TOPIC --project $HOST \
-          --message "{ \"kind\": \"storage#object\", \"name\": \"$IMAGE/$IMAGE-${{ env.HELM_CHART_VERSION }}.tgz\", \"bucket\": \"$ARTIFACT_BUCKET\" }" \
+          --message "{ \"kind\": \"storage#object\", \"name\": \"$IMAGE/$IMAGE-${{ env.HELM_VERSION }}.tgz\", \"bucket\": \"$ARTIFACT_BUCKET\" }" \
           --attribute cd="actions"

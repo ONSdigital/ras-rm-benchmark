@@ -87,6 +87,7 @@ jobs:
           echo '#!/bin/bash' >> /tmp/gpg.sh
           echo 'gpg --batch --pinentry-mode=loopback --passphrase $BOT_GPG_KEY_PASSPHRASE $@' >> /tmp/gpg.sh
           chmod +x /tmp/gpg.sh
+          ls -ltra /tmp
 
       - name: Setup git
         run: |

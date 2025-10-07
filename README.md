@@ -8,7 +8,7 @@ Poorly named, this tool does not carry out any benchmarking of RASRM's performan
 To illustrate its use, the following commands can be used to run or test locally. Ensure you have authenticated your gcloud account as these scripts require access to the `locust` and `benchmark` GCP buckets.
 
 ```bash
-cd <YOUR_PARTH>/ras-rm-benchmark
+cd <YOUR_PATH>/ras-rm-benchmark
 
 # set the variables for the run
 export NUMBER_OF_DAYS=10

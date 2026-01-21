@@ -8,6 +8,9 @@ spec:
     metadata:
       name: "{{ .Chart.Name }}"
     spec:
+      serviceAccountName: ras-rm-k8s-services
+      imagePullSecrets:
+        - name: gar-secret
       restartPolicy: "OnFailure"
       containers:
         - name: "{{ .Chart.Name }}"
